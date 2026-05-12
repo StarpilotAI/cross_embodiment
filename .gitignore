@@ -1,0 +1,44 @@
+# Python
+.venv/
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.python-version
+uv.lock
+
+# Bulky derived artifacts (regenerate via scripts/)
+artifacts/
+data/hf/
+data/frames_scene_rgb_2/
+data/frames_scene_rgb_2_small/
+data/frames_scene_rgb_2_small_jpg512/
+data/frames_scene_rgb/
+data/previews/
+data/inspect/
+data/masks_small512/
+data/ProPainter/
+data/i2rt/
+
+# Generated XML scenes
+data/yam_oneframe.xml
+data/yam_full_calibrated.xml
+data/yam_grippers_only.xml
+data/yam_scene_debug.xml
+data/yam_scene_test.xml
+data/opt_*.xml
+data/probe.xml
+
+# Calibration outputs (regenerate from clicks via scripts/)
+data/scene_cam_calibration.json
+data/frames_meta.json
+data/info.json
+
+# Local server logs
+server.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Scene-cam calibration · click annotation</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; padding: 6px 10px; background: #0d0f12; color: #d6d6d6;
+         font: 12px/1.3 -apple-system, "Segoe UI", system-ui, sans-serif;
+         display: flex; flex-direction: column; box-sizing: border-box; }
+  h1 { margin: 0; font-size: 13px; font-weight: 600; }
+  .sub { color: #8b8b8b; margin: 2px 0 6px 0; font-size: 10px; max-width: 1100px;
+         line-height: 1.35; }
+  .sub b { color: #c7d3df; }
+  .layout { display: grid; grid-template-columns: 1fr 290px; gap: 8px;
+            align-items: stretch; flex: 1; min-height: 0; }
+  .canvasWrap { background:#000; border-radius:5px;
+                position: relative; overflow: hidden; cursor: crosshair;
+                /* Square, but bounded by available height */
+                aspect-ratio: 1 / 1; max-height: 100%;
+                justify-self: start; }
+  .canvasWrap img { width:100%; height:100%; display:block;
+                    image-rendering: -webkit-optimize-contrast; }
+  .canvasWrap .pt { position:absolute; transform: translate(-50%, -50%);
+                    width:9px; height:9px; border-radius:50%;
+                    border:2px solid #fff; pointer-events: none;
+                    box-sizing: border-box; }
+  .canvasWrap .lbl { position:absolute; transform: translate(8px, -50%);
+                     background:#000a; padding: 0 4px; border-radius:3px;
+                     font-size:9px; color:#fff; pointer-events:none;
+                     white-space:nowrap; }
+  .side { background:#16181d; border-radius:5px; padding: 8px;
+          display: flex; flex-direction: column; min-height: 0; }
+  .side h2 { margin: 0 0 4px 0; font-size: 10px; color:#9fb0c2;
+             text-transform: uppercase; letter-spacing: .04em; }
+  .side .group { margin-bottom: 8px; }
+  .side .group:last-child { margin-bottom: 0; }
+  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .controls input[type=number] { width: 60px; background:#0d0f12;
+              color: #d6d6d6; border: 1px solid #2b3036; border-radius: 3px;
+              padding: 1px 4px; font: inherit; }
+  button { background:#2b3036; color:#d6d6d6; border:1px solid #404750;
+           border-radius:4px; padding: 3px 8px; cursor: pointer; font: inherit;
+           font-size: 11px; }
+  button:hover { background:#363c44; }
+  button.active { background:#3a4a5e; border-color:#5a7090; }
+  .targetRow { display: flex; gap: 5px; margin-bottom: 0; flex-wrap: wrap; }
+  .targetRow button { padding: 3px 7px; font-size: 11px; }
+  .lbl-arm1 { color: #5af; }
+  .lbl-arm2 { color: #fa5; }
+  .pt.arm1 { background: #38d; }
+  .pt.arm2 { background: #d83; }
+  .clickList { font-family: ui-monospace, Consolas, monospace; font-size: 10px;
+               background:#0d0f12; padding: 4px 6px; border-radius: 3px;
+               flex: 1; min-height: 0; overflow:auto; }
+  .clickList .row { display:flex; justify-content:space-between; line-height: 1.25; }
+  .clickList .row.cur { color:#fff; background:#2a2f36; }
+  details summary { font-size: 10px; color:#9fb0c2; cursor: pointer; outline:none; }
+  details[open] summary { margin-bottom: 4px; }
+  details pre, details ol { font-size: 10px; color:#9fb0c2;
+                background:#0d0f12; padding: 4px 8px; border-radius: 3px;
+                margin: 0; }
+  details ol { padding-left: 22px; line-height: 1.4; }
+  .help { font-size: 10px; color:#7a8694; line-height: 1.4; margin-top: 4px; }
+  .help kbd { background:#1c2026; padding: 0 4px; border-radius:3px; font-size: 9px; }
+  .frameNav { display: flex; gap: 4px; align-items: center; }
+  .stat { color:#7a8694; font-size:10px; margin-top: 2px; }
+</style>
+</head>
+<body>
+<h1>Scene-cam calibration · click the base of each visible PIKA gripper</h1>
+<div class="sub">
+  Same physical gripper → same arm label across frames. The solver tries both
+  arm1↔arm2 assignments. Aim for 12+ frames with <b>depth variation</b>
+  (operator pulled back vs leaning in toward the camera).
+</div>
+<div class="layout">
+  <div class="canvasWrap" id="cw">
+    <img id="im" />
+  </div>
+  <div class="side">
+    <div class="group">
+      <h2>Frame</h2>
+      <div class="frameNav">
+        <button id="prev">←</button>
+        <input id="fnum" type="number" min="0" max="1162" value="0" />
+        <button id="next">→</button>
+        <button id="jump">jump random</button>
+      </div>
+      <div class="stat" id="stat">arm1 pose: ?, arm2 pose: ?</div>
+    </div>
+
+    <div class="group">
+      <h2>Active arm</h2>
+      <div class="targetRow">
+        <button data-arm="1" data-land="base" class="active">arm1 · base</button>
+        <button data-arm="2" data-land="base">arm2 · base</button>
+      </div>
+      <div class="help">
+        Keyboard: <kbd>1</kbd>=arm1, <kbd>2</kbd>=arm2, <kbd>←</kbd>/<kbd>→</kbd>=frame.
+        Right-click marker to delete.
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="controls">
+        <button id="save">Download JSON</button>
+        <button id="clear">Clear all</button>
+      </div>
+    </div>
+
+    <h2>Recorded clicks <span class="stat" id="ccount">0</span></h2>
+    <div class="clickList" id="list"></div>
+
+    <details style="margin-top:6px">
+      <summary>How to use</summary>
+      <ol>
+        <li>Pick frames where the PIKA gripper is clearly visible (try frames 200, 400, 600, 800, 1000).</li>
+        <li>For each visible arm: click <b>origin</b>, then optionally <b>tip-L</b>/<b>tip-R</b>.</li>
+        <li>Aim for ~10 frames spread across the episode, each contributing 1–3 clicks per arm = 20–40 correspondences total. More is better.</li>
+        <li>Click <b>Download JSON</b> when done. I run <code>scripts/09_solve_pnp.py</code> on it.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<script>
+const N = 1163;
+const PAD = i => String(i).padStart(6, "0");
+let meta = null;
+let frame = 0;
+let active = {arm: 1, land: "base"};
+
+// clicks: array of {frame, arm, landmark, u, v}
+let clicks = [];
+
+async function loadMeta() {
+  const r = await fetch("../data/frames_meta.json");
+  meta = await r.json();
+}
+
+function setActive(arm, land) {
+  active = {arm, land};
+  document.querySelectorAll(".targetRow button").forEach(b => {
+    b.classList.toggle("active", +b.dataset.arm===arm && b.dataset.land===land);
+  });
+}
+
+function statLine() {
+  if (!meta) return "loading…";
+  const m = meta[frame];
+  const s = m.state;
+  if (!s) return "no state";
+  const fmt = a => `[${a[0].toFixed(3)}, ${a[1].toFixed(3)}, ${a[2].toFixed(3)}]`;
+  const a1 = fmt(s.slice(7,10));
+  const a2 = fmt(s.slice(7+16,10+16));
+  return `arm1 pose: ${a1}  ·  arm2 pose: ${a2}`;
+}
+
+function render() {
+  document.getElementById("im").src = `../artifacts/pinhole/${PAD(frame)}.png`;
+  document.getElementById("fnum").value = frame;
+  document.getElementById("stat").textContent = statLine();
+  // Redraw markers for current frame
+  document.querySelectorAll(".pt, .lbl").forEach(e => e.remove());
+  const cw = document.getElementById("cw");
+  const here = clicks.filter(c => c.frame === frame);
+  for (const c of here) {
+    const dot = document.createElement("div");
+    dot.className = `pt arm${c.arm}`;
+    dot.style.left = `${c.u * 100 / 1024}%`;
+    dot.style.top  = `${c.v * 100 / 1024}%`;
+    dot.dataset.idx = clicks.indexOf(c);
+    cw.appendChild(dot);
+    const tag = document.createElement("div");
+    tag.className = `lbl lbl-arm${c.arm}`;
+    tag.style.left = `${c.u * 100 / 1024}%`;
+    tag.style.top  = `${c.v * 100 / 1024}%`;
+    tag.textContent = `a${c.arm}·${c.land.replace("origin","O").replace("tip_","")}`;
+    cw.appendChild(tag);
+  }
+  // Refresh list
+  const l = document.getElementById("list");
+  l.innerHTML = "";
+  for (let i = clicks.length-1; i >= 0; i--) {
+    const c = clicks[i];
+    const row = document.createElement("div");
+    row.className = "row" + (c.frame===frame ? " cur" : "");
+    row.innerHTML = `<span>f${String(c.frame).padStart(4,"0")} a${c.arm}·${c.land}</span><span>(${Math.round(c.u)},${Math.round(c.v)})</span>`;
+    l.appendChild(row);
+  }
+  document.getElementById("ccount").textContent = `(${clicks.length})`;
+}
+
+document.getElementById("cw").addEventListener("click", (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  const u = (e.clientX - r.left) / r.width * 1024;
+  const v = (e.clientY - r.top)  / r.height * 1024;
+  // Replace any prior click with same {frame, arm, land}
+  clicks = clicks.filter(c => !(c.frame===frame && c.arm===active.arm && c.land===active.land));
+  clicks.push({frame, arm: active.arm, land: active.land, u, v});
+  render();
+});
+
+document.getElementById("cw").addEventListener("contextmenu", (e) => {
+  // right-click on a marker deletes it
+  e.preventDefault();
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (el && el.classList.contains("pt")) {
+    const idx = +el.dataset.idx;
+    clicks.splice(idx, 1);
+    render();
+  }
+});
+
+document.querySelectorAll(".targetRow button").forEach(b => {
+  b.onclick = () => setActive(+b.dataset.arm, b.dataset.land);
+});
+
+document.getElementById("prev").onclick = () => { frame=Math.max(0,frame-1); render(); };
+document.getElementById("next").onclick = () => { frame=Math.min(N-1,frame+1); render(); };
+document.getElementById("jump").onclick = () => { frame=Math.floor(Math.random()*N); render(); };
+document.getElementById("fnum").addEventListener("change", e => {
+  frame = Math.max(0, Math.min(N-1, +e.target.value)); render();
+});
+
+document.getElementById("save").onclick = () => {
+  const blob = new Blob([JSON.stringify({clicks, image_size: [1024,1024]}, null, 2)],
+                        {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "calibration_clicks.json";
+  a.click();
+};
+document.getElementById("clear").onclick = () => { if (confirm("Clear all clicks?")) { clicks=[]; render(); } };
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft")  { frame=Math.max(0,frame-1); render(); }
+  if (e.key === "ArrowRight") { frame=Math.min(N-1,frame+1); render(); }
+  if (e.key === "1") setActive(1, "base");
+  if (e.key === "2") setActive(2, "base");
+});
+
+(async () => { await loadMeta(); render(); })();
+</script>
+</body>
+</html>

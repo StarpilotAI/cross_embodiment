@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>UMI→YAM pipeline · pinhole-first</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 10px 14px; background: #0d0f12; color: #d6d6d6;
+         font: 12px/1.35 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  h1 { margin: 0 0 2px 0; font-size: 14px; font-weight: 600; }
+  .sub { color: #8b8b8b; margin-bottom: 8px; font-size: 11px; }
+  .sub code { background: #1c2026; padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 8px;
+              background:#16181d; padding:6px 10px; border-radius:5px; }
+  .controls input[type=range] { flex: 1; }
+  .frame-label { font-variant-numeric: tabular-nums; min-width: 120px; color:#9fb0c2; font-size:11px; }
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(8, 1fr); }
+  .panel { background:#16181d; border-radius:5px; padding: 6px; }
+  .panel h3 { margin: 0 0 4px 0; font-size: 10px; font-weight: 600;
+              color:#9fb0c2; text-transform: uppercase; letter-spacing:.04em;
+              display:flex; justify-content:space-between; align-items:baseline; gap:6px; }
+  .panel h3 .note { color:#5a6470; font-size:9px; text-transform:none; letter-spacing:0;
+                    font-weight:400; text-align:right; }
+  .panel .imgwrap { aspect-ratio: 1 / 1; background:#000; display:flex;
+                    align-items:center; justify-content:center; border-radius:3px;
+                    overflow:hidden; position:relative; }
+  .panel img { width: 100%; height: 100%; object-fit: contain; }
+  .panel .missing { color: #555; font-size: 10px; text-align: center; padding: 14px; }
+  details.meta { grid-column: span 8; background:#16181d; border-radius:5px; padding: 6px 10px; }
+  details.meta summary { cursor:pointer; font-size: 10px; font-weight:600; color:#9fb0c2;
+                        text-transform: uppercase; letter-spacing:.04em; outline:none; }
+  details.meta pre { margin:6px 0 0 0; font-size: 11px; color:#9fb0c2;
+                    white-space: pre-wrap; word-break: break-word;
+                    max-height: 200px; overflow:auto;
+                    font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+  button { background:#2b3036; color:#d6d6d6; border:1px solid #404750;
+           border-radius:4px; padding: 3px 9px; cursor: pointer; font: inherit; }
+  button:hover { background:#363c44; }
+  .legend { font-size: 10px; color:#7a8694; }
+  .stage-num { display:inline-block; width:16px; height:16px; line-height:16px;
+               text-align:center; background:#2b3036; color:#9fb0c2;
+               border-radius:50%; font-size:9px; margin-right:4px; }
+</style>
+</head>
+<body>
+<h1>UMI-style → YAM overlay · pinhole-first pipeline</h1>
+<div class="sub">
+  <code>scene_rgb_2</code> goes through 7 stages. Original fisheye is shown first;
+  everything else runs in the pinhole-undistorted space.
+  ← / → to scrub · space to play. Calibrate page at
+  <code>/viewer/calibrate.html</code>.
+</div>
+
+<div class="controls">
+  <button id="prev">←</button>
+  <input id="slider" type="range" min="0" max="1162" value="0" />
+  <button id="next">→</button>
+  <span class="frame-label" id="lbl">frame 000000 / t=0.000s</span>
+  <button id="play">▶</button>
+  <span class="legend">space = play/pause</span>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h3><span><span class="stage-num">1</span>Fisheye (original)</span><span class="note">scene_rgb_2 1024² raw</span></h3>
+    <div class="imgwrap"><img id="img_fisheye" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">2</span>Pinhole undistort</span><span class="note">60° FOV crop, K_pin</span></h3>
+    <div class="imgwrap"><img id="img_pinhole" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">3</span>Mask</span><span class="note">SAM2 on pinhole · person + arm</span></h3>
+    <div class="imgwrap"><img id="img_mask" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">4</span>Inpainted</span><span class="note">LaMa on pinhole</span></h3>
+    <div class="imgwrap"><img id="img_inpaint" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">5</span>Depth</span><span class="note">Depth-Anything-V2 on pinhole</span></h3>
+    <div class="imgwrap"><img id="img_depth" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">6</span>YAM render</span><span class="note">Mujoco · PnP-calibrated cam</span></h3>
+    <div class="imgwrap"><img id="img_render" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">7</span>Composite</span><span class="note">render α onto pinhole inpaint</span></h3>
+    <div class="imgwrap"><img id="img_comp" /></div>
+  </div>
+  <div class="panel">
+    <h3><span><span class="stage-num">D</span>Calib debug</span><span class="note">cyan=arm2 proj · yellow=arm1 proj · ring=click</span></h3>
+    <div class="imgwrap"><img id="img_debug" /></div>
+  </div>
+  <details class="meta">
+    <summary>Per-frame state + action (click to expand)</summary>
+    <pre id="meta_pre">loading…</pre>
+  </details>
+</div>
+
+<script>
+const N = 1163;
+const PAD = i => String(i).padStart(6, "0");
+let meta = null;
+let frame = 0;
+
+async function loadMeta() {
+  try {
+    const r = await fetch("../data/frames_meta.json");
+    meta = await r.json();
+  } catch (e) { meta = null; }
+}
+
+function setSrcWithFallback(imgId, candidates) {
+  const img = document.getElementById(imgId);
+  const wrap = img.parentElement;
+  let i = 0;
+  const tryNext = () => {
+    if (i >= candidates.length) {
+      img.removeAttribute("src");
+      img.style.display = "none";
+      if (!wrap.querySelector(".missing")) {
+        const m = document.createElement("div");
+        m.className = "missing";
+        m.textContent = "(not yet generated)";
+        wrap.appendChild(m);
+      }
+      return;
+    }
+    img.style.display = "";
+    const m = wrap.querySelector(".missing"); if (m) m.remove();
+    img.onerror = () => { i++; tryNext(); };
+    img.src = candidates[i];
+  };
+  tryNext();
+}
+
+function render() {
+  const idx = PAD(frame);
+  setSrcWithFallback("img_fisheye",  [`../data/frames_scene_rgb_2/${idx}.png`]);
+  setSrcWithFallback("img_pinhole",  [`../artifacts/pinhole/${idx}.png`]);
+  // Mask overlay sparse — fall back to nearest within 50
+  const maskC = [];
+  for (let off = 0; off <= 50; off++) {
+    if (frame-off >= 0) maskC.push(`../artifacts/pinhole_masks_overlay/${PAD(frame-off)}.png`);
+    if (frame+off < N)  maskC.push(`../artifacts/pinhole_masks_overlay/${PAD(frame+off)}.png`);
+  }
+  setSrcWithFallback("img_mask", maskC);
+  setSrcWithFallback("img_inpaint", [`../artifacts/pinhole_inpainted/${idx}.png`]);
+  // Depth previews every 10
+  const depthC = [];
+  for (let off = 0; off <= 10; off++) {
+    if (frame-off >= 0) depthC.push(`../artifacts/depth_pinhole_preview/${PAD(frame-off)}.png`);
+    if (frame+off < N)  depthC.push(`../artifacts/depth_pinhole_preview/${PAD(frame+off)}.png`);
+  }
+  setSrcWithFallback("img_depth", depthC);
+  setSrcWithFallback("img_render", [`../artifacts/render/${idx}.png`]);
+  setSrcWithFallback("img_comp",   [`../artifacts/composite_pinhole/${idx}.png`]);
+  // Debug: per-frame projection markers (bright cv2 circles), drawn over
+  // pinhole bg. On clicked frames the user's clicks are also shown as
+  // yellow rings for comparison.
+  setSrcWithFallback("img_debug", [`../artifacts/proj_overlay/${idx}.png`]);
+
+  const t = meta ? meta[frame].timestamp : null;
+  document.getElementById("lbl").textContent =
+    `frame ${idx} / t=${t == null ? "?" : t.toFixed(3)}s`;
+  if (meta) {
+    const m = meta[frame];
+    const stateNames = ["enc_deg","imu_ax","imu_ay","imu_az","imu_gx","imu_gy","imu_gz",
+                        "pose_x","pose_y","pose_z","pose_qx","pose_qy","pose_qz","pose_qw",
+                        "g_open","g_dist"];
+    const actNames = ["dx","dy","dz","drx","dry","drz","g_width"];
+    const splitState = a => stateNames.map((n,i)=>`${n.padEnd(9)} = ${(a[i]).toFixed(4)}`).join("\n  ");
+    const splitAct   = a => actNames  .map((n,i)=>`${n.padEnd(8)} = ${(a[i]).toFixed(4)}`).join("\n  ");
+    const a1s = m.state ? m.state.slice(0,16) : null;
+    const a2s = m.state ? m.state.slice(16,32) : null;
+    const a1a = m.action ? m.action.slice(0,7) : null;
+    const a2a = m.action ? m.action.slice(7,14) : null;
+    document.getElementById("meta_pre").textContent =
+      `frame_index : ${m.frame}    timestamp : ${m.timestamp}s\n\n` +
+      `── arm1 state ────────\n  ${a1s ? splitState(a1s) : "n/a"}\n\n` +
+      `── arm2 state ────────\n  ${a2s ? splitState(a2s) : "n/a"}\n\n` +
+      `── arm1 action ───────\n  ${a1a ? splitAct(a1a) : "n/a"}\n\n` +
+      `── arm2 action ───────\n  ${a2a ? splitAct(a2a) : "n/a"}`;
+  }
+}
+
+const slider = document.getElementById("slider");
+slider.addEventListener("input", () => { frame = +slider.value; render(); });
+document.getElementById("prev").onclick = () => { frame = Math.max(0, frame-1); slider.value = frame; render(); };
+document.getElementById("next").onclick = () => { frame = Math.min(N-1, frame+1); slider.value = frame; render(); };
+
+let playing = false, playTimer = null;
+function togglePlay() {
+  playing = !playing;
+  document.getElementById("play").textContent = playing ? "⏸" : "▶";
+  if (playing) {
+    playTimer = setInterval(() => { frame = (frame+1)%N; slider.value = frame; render(); }, 1000/30);
+  } else clearInterval(playTimer);
+}
+document.getElementById("play").onclick = togglePlay;
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft")  { frame = Math.max(0, frame-1); slider.value = frame; render(); }
+  if (e.key === "ArrowRight") { frame = Math.min(N-1, frame+1); slider.value = frame; render(); }
+  if (e.key === " ") { e.preventDefault(); togglePlay(); }
+});
+
+(async () => { await loadMeta(); render(); })();
+</script>
+</body>
+</html>

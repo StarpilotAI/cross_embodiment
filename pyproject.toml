@@ -1,0 +1,26 @@
+[project]
+name = "cross-embodiment"
+version = "0.1.0"
+description = "Render a calibrated YAM bimanual robot into Vive-tracked human video"
+requires-python = ">=3.11"
+dependencies = [
+    "torch",
+    "torchvision",
+    "opencv-python",
+    "numpy",
+    "scipy",
+    "pyarrow",
+    "av",
+    "datasets",
+    "huggingface_hub",
+    "transformers",
+    "accelerate",
+    "einops",
+    "mujoco",
+    "sam2",
+    "hydra-core",
+    "iopath",
+    "matplotlib",
+    "trimesh",
+    "simple-lama-inpainting",
+]

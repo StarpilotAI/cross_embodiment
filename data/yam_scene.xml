@@ -1,0 +1,149 @@
+<mujoco model="yam_scene">
+  <compiler angle="radian" meshdir="i2rt/i2rt/robot_models/arm/yam/assets"/>
+  <option timestep="0.002"/>
+  <visual>
+    <global offwidth="1024" offheight="1024"/>
+    <quality shadowsize="2048"/>
+    <headlight diffuse="0.55 0.55 0.55" ambient="0.45 0.45 0.45" specular="0.1 0.1 0.1"/>
+  </visual>
+
+  <default>
+    <!-- Uniform matte-aluminum look for all robot links -->
+    <default class="yam_link">
+      <geom type="mesh" rgba="0.78 0.78 0.80 1.0"
+            material="aluminum"
+            density="800"/>
+    </default>
+    <default class="yam_dark">
+      <geom type="mesh" rgba="0.20 0.20 0.22 1.0"
+            material="dark_plastic"
+            density="800"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="base"  file="base.stl"/>
+    <mesh name="link1" file="link1.stl"/>
+    <mesh name="link2" file="link2.stl"/>
+    <mesh name="link3" file="link3.stl"/>
+    <mesh name="link4" file="link4.stl"/>
+    <mesh name="link5" file="link5.stl"/>
+    <mesh name="gripper_body" file="gripper.stl"/>
+    <mesh name="tip_left"     file="tip_left.stl"/>
+    <mesh name="tip_right"    file="tip_right.stl"/>
+    <material name="aluminum"    rgba="0.78 0.78 0.80 1.0" specular="0.4" shininess="0.6" reflectance="0.05"/>
+    <material name="dark_plastic" rgba="0.20 0.20 0.22 1.0" specular="0.1" shininess="0.2"/>
+    <texture name="floor" type="2d" builtin="flat" rgb1="0 0 0" width="64" height="64"/>
+    <material name="floor" texture="floor" reflectance="0.0"/>
+    <texture name="sky" type="skybox" builtin="flat" rgb1="0 0 0" rgb2="0 0 0" width="32" height="32"/>
+  </asset>
+
+  <worldbody>
+    <light name="L1" pos="0 0 1.6"  dir="0 0 -1"   diffuse="0.45 0.45 0.45"/>
+    <light name="L2" pos="0.4 0 1.3" dir="-0.3 0 -1" diffuse="0.25 0.25 0.25"/>
+    <geom name="floor" type="plane" pos="0 0 0" size="2 2 0.05" rgba="0 0 0 1" material="floor"/>
+
+    <!-- Top-down ceiling camera matching the scene_rgb_2 perspective.
+         xyaxes="1 0 0  0 1 0" makes the camera look straight down at -z,
+         with world+x → image right, world+y → image up. Since the operator
+         in the dataset is on the LEFT of the image, both YAM bases live at
+         world -x (so they appear on the LEFT) and reach toward +x (the
+         mat in the center / right). -->
+    <camera name="scene" pos="0 0 1.10" xyaxes="1 0 0  0 1 0" fovy="70"/>
+
+    <!-- ARM 1 in WORLD frame matched to Vive calibration:
+         arms extend in world +y direction, which projects to image-RIGHT
+         in this scene-cam view (R_w2c[0] ≈ world+y). YAM bases sit at low
+         world -y so they appear on the image LEFT, with the arm reaching
+         forward toward the operator's gripper workspace. -->
+    <body name="yam1_base" pos="-0.10 -0.30 -0.05" euler="0 0 1.5708">
+      <geom class="yam_dark" pos="-0.0374966 -0.0464005 0.187501" quat="0.707105 0 0.707108 0" mesh="base"/>
+      <body name="yam1_link1" pos="0 0 0.067" quat="0.707105 0 0 -0.707108">
+        <inertial pos="-0.00261782 0.00744082 0.0237251" quat="0.602276 0.365837 0.642523 0.300984" mass="0.104154" diaginertia="0.000139023 0.000109628 4.8478e-05"/>
+        <joint name="yam1_j1" pos="0 0 0" axis="0 0 1" range="-2.61799 3.05433"/>
+        <geom class="yam_link" pos="-0.0464 0.0374968 0.119501" quat="0.499998 0.5 0.5 -0.500002" mesh="link1"/>
+        <body name="yam1_link2" pos="-0.0329 0.02 0.0455" quat="0.499998 0.5 -0.500002 -0.5">
+          <inertial pos="0.129165 0.000134495 -0.0321253" quat="0.499976 0.500008 0.500105 0.499911" mass="1.46908" diaginertia="0.0146686 0.014599 0.000800089"/>
+          <joint name="yam1_j2" pos="0 0 0" axis="0 0 1" range="0 3.65"/>
+          <geom class="yam_link" pos="-0.0174977 -0.0740001 -0.07925" quat="0.499998 0.5 0.500002 0.5" mesh="link2"/>
+          <body name="yam1_link3" pos="0.264 4.08431e-07 -0.06375" quat="9.38184e-07 -0.707105 -0.707108 9.38187e-07">
+            <inertial pos="0.0556042 -0.135083 -0.0340514" quat="0.704407 0.697077 0.121918 -0.0550519" mass="0.982553" diaginertia="0.00765198 0.0076296 0.000876442"/>
+            <joint name="yam1_j3" pos="0 0 0" axis="0 0 1" range="0 3.66519"/>
+            <geom class="yam_link" pos="0.0740003 -0.281499 -0.0813" quat="9.38184e-07 9.38187e-07 -0.707108 -0.707105" mesh="link3"/>
+            <body name="yam1_link4" pos="0.0600003 -0.244999 -0.00205" quat="1.32679e-06 0 0 -1">
+              <inertial pos="-0.0543529 0.057068 -0.0332231" quat="0.636075 0.627088 0.370444 0.254833" mass="0.46678" diaginertia="0.000817855 0.000791274 0.000295776"/>
+              <joint name="yam1_j4" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708"/>
+              <geom class="yam_link" pos="-0.0138003 0.0364989 -0.0787882" quat="0.707105 0.707108 0 0" mesh="link4"/>
+              <body name="yam1_link5" pos="-0.0403003 0.0703851 -0.0323887" quat="9.38184e-07 -0.707105 -9.38187e-07 -0.707108">
+                <inertial pos="-3.55003e-05 -0.00717397 0.0375847" quat="0.911516 0.411243 -0.00302177 -0.00303654" mass="0.403307" diaginertia="0.000219794 0.000195686 0.000169647"/>
+                <joint name="yam1_j5" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708"/>
+                <geom class="yam_dark" pos="-0.0463995 0.0311519 0.0265" quat="0.499998 -0.5 -0.5 -0.500002" mesh="link5"/>
+                <body name="yam1_link6" pos="0 0 0" quat="1 0 0 0">
+                  <inertial pos="0 0 0" mass="1e-6" diaginertia="1e-9 1e-9 1e-9"/>
+                  <joint name="yam1_j6" pos="0 0 0" axis="0 0 1" range="-2.0944 2.0944"/>
+                  <site name="yam1_ee" pos="0 0 0.06" size="0.006" rgba="1 0 0 1"/>
+                  <body name="yam1_gripper" pos="0 0 0.0" quat="1 0 0 0">
+                    <geom class="yam_dark" pos="-0.014 -0.0463995 0.0731" quat="1 0 0 0" type="mesh" mesh="gripper_body" contype="0" conaffinity="0"/>
+                    <body name="yam1_tip_left" pos="-0.0238981 0.0450619 -0.0545599" quat="0.499998 -0.5 -0.5 -0.500002">
+                      <joint name="yam1_j7" pos="0 0 0" type="slide" axis="0 0 -1" range="0 0.0475"/>
+                      <geom class="yam_link" pos="0.129783 0.00999321 -0.0914614" quat="0.499998 0.5 0.500002 0.5" type="mesh" mesh="tip_left"/>
+                    </body>
+                    <body name="yam1_tip_right" pos="0.0238981 -0.0450619 -0.0545599" quat="0.707105 0.707108 0 0">
+                      <joint name="yam1_j8" pos="0 0 0" type="slide" axis="0 0 -1" range="0 0.0475"/>
+                      <geom class="yam_link" pos="-0.0379932 0.129783 0.00133753" quat="0.707105 -0.707108 0 0" type="mesh" mesh="tip_right"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <body name="yam2_base" pos="0.10 -0.30 -0.05" euler="0 0 1.5708">
+      <geom class="yam_dark" pos="-0.0374966 -0.0464005 0.187501" quat="0.707105 0 0.707108 0" mesh="base"/>
+      <body name="yam2_link1" pos="0 0 0.067" quat="0.707105 0 0 -0.707108">
+        <inertial pos="-0.00261782 0.00744082 0.0237251" quat="0.602276 0.365837 0.642523 0.300984" mass="0.104154" diaginertia="0.000139023 0.000109628 4.8478e-05"/>
+        <joint name="yam2_j1" pos="0 0 0" axis="0 0 1" range="-2.61799 3.05433"/>
+        <geom class="yam_link" pos="-0.0464 0.0374968 0.119501" quat="0.499998 0.5 0.5 -0.500002" mesh="link1"/>
+        <body name="yam2_link2" pos="-0.0329 0.02 0.0455" quat="0.499998 0.5 -0.500002 -0.5">
+          <inertial pos="0.129165 0.000134495 -0.0321253" quat="0.499976 0.500008 0.500105 0.499911" mass="1.46908" diaginertia="0.0146686 0.014599 0.000800089"/>
+          <joint name="yam2_j2" pos="0 0 0" axis="0 0 1" range="0 3.65"/>
+          <geom class="yam_link" pos="-0.0174977 -0.0740001 -0.07925" quat="0.499998 0.5 0.500002 0.5" mesh="link2"/>
+          <body name="yam2_link3" pos="0.264 4.08431e-07 -0.06375" quat="9.38184e-07 -0.707105 -0.707108 9.38187e-07">
+            <inertial pos="0.0556042 -0.135083 -0.0340514" quat="0.704407 0.697077 0.121918 -0.0550519" mass="0.982553" diaginertia="0.00765198 0.0076296 0.000876442"/>
+            <joint name="yam2_j3" pos="0 0 0" axis="0 0 1" range="0 3.66519"/>
+            <geom class="yam_link" pos="0.0740003 -0.281499 -0.0813" quat="9.38184e-07 9.38187e-07 -0.707108 -0.707105" mesh="link3"/>
+            <body name="yam2_link4" pos="0.0600003 -0.244999 -0.00205" quat="1.32679e-06 0 0 -1">
+              <inertial pos="-0.0543529 0.057068 -0.0332231" quat="0.636075 0.627088 0.370444 0.254833" mass="0.46678" diaginertia="0.000817855 0.000791274 0.000295776"/>
+              <joint name="yam2_j4" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708"/>
+              <geom class="yam_link" pos="-0.0138003 0.0364989 -0.0787882" quat="0.707105 0.707108 0 0" mesh="link4"/>
+              <body name="yam2_link5" pos="-0.0403003 0.0703851 -0.0323887" quat="9.38184e-07 -0.707105 -9.38187e-07 -0.707108">
+                <inertial pos="-3.55003e-05 -0.00717397 0.0375847" quat="0.911516 0.411243 -0.00302177 -0.00303654" mass="0.403307" diaginertia="0.000219794 0.000195686 0.000169647"/>
+                <joint name="yam2_j5" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708"/>
+                <geom class="yam_dark" pos="-0.0463995 0.0311519 0.0265" quat="0.499998 -0.5 -0.5 -0.500002" mesh="link5"/>
+                <body name="yam2_link6" pos="0 0 0" quat="1 0 0 0">
+                  <inertial pos="0 0 0" mass="1e-6" diaginertia="1e-9 1e-9 1e-9"/>
+                  <joint name="yam2_j6" pos="0 0 0" axis="0 0 1" range="-2.0944 2.0944"/>
+                  <site name="yam2_ee" pos="0 0 0.06" size="0.006" rgba="0 1 0 1"/>
+                  <body name="yam2_gripper" pos="0 0 0.0" quat="1 0 0 0">
+                    <geom class="yam_dark" pos="-0.014 -0.0463995 0.0731" quat="1 0 0 0" type="mesh" mesh="gripper_body" contype="0" conaffinity="0"/>
+                    <body name="yam2_tip_left" pos="-0.0238981 0.0450619 -0.0545599" quat="0.499998 -0.5 -0.5 -0.500002">
+                      <joint name="yam2_j7" pos="0 0 0" type="slide" axis="0 0 -1" range="0 0.0475"/>
+                      <geom class="yam_link" pos="0.129783 0.00999321 -0.0914614" quat="0.499998 0.5 0.500002 0.5" type="mesh" mesh="tip_left"/>
+                    </body>
+                    <body name="yam2_tip_right" pos="0.0238981 -0.0450619 -0.0545599" quat="0.707105 0.707108 0 0">
+                      <joint name="yam2_j8" pos="0 0 0" type="slide" axis="0 0 -1" range="0 0.0475"/>
+                      <geom class="yam_link" pos="-0.0379932 0.129783 0.00133753" quat="0.707105 -0.707108 0 0" type="mesh" mesh="tip_right"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
