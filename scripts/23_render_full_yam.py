@@ -109,13 +109,13 @@ def yam_chain(prefix, base_pos, xyaxes):
                 <inertial pos="-3.55003e-05 -0.00717397 0.0375847" quat="0.911516 0.411243 -0.00302177 -0.00303654" mass="0.403307" diaginertia="0.000219794 0.000195686 0.000169647"/>
                 <joint name="{prefix}_j5" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708"/>
                 <geom class="yam_dark" pos="-0.0463995 0.0311519 0.0265" quat="0.499998 -0.5 -0.5 -0.500002" mesh="link5"/>
-                <body name="{prefix}_link6" pos="0 0 0" quat="1 0 0 0">
+                <body name="{prefix}_link6" pos="2.39858e-07 -0.0419481 0.0404996" quat="0.499998 -0.5 -0.5 -0.500002">
                   <inertial pos="0 0 0" mass="1e-6" diaginertia="1e-9 1e-9 1e-9"/>
-                  <joint name="{prefix}_j6" pos="0 0 0" axis="0 0 1" range="-2.0944 2.0944"/>
+                  <joint name="{prefix}_j6" pos="0 0 0" axis="0 0 -1" range="-2.0944 2.0944"/>
                   <site name="{prefix}_ee" pos="0 0 0" size="0.005" rgba="1 0 0 1"/>
-                  <!-- Gripper attached to link6 via the same fixup as script 21
-                       so the BASE point lands at link6 origin + R*(0,0,-0.0546) -->
-                  <body name="{prefix}_gfix" pos="0 0 -0.1092" euler="3.14159265 0 0">
+                  <!-- Canonical i2rt linear_4310 mounting (pos=0,0,0 quat=I,
+                       no fixup); link6 mount pos/quat/axis from config/linear_4310.yml -->
+                  <body name="{prefix}_gripper" pos="0 0 0" quat="1 0 0 0">
                     <geom pos="-0.014 -0.0463995 0.0731" quat="1 0 0 0" type="mesh" mesh="gripper_body" material="dark" contype="0" conaffinity="0"/>
                     <body name="{prefix}_tl" pos="-0.0238981 0.0450619 -0.0545599" quat="0.499998 -0.5 -0.5 -0.500002">
                       <geom pos="0.129783 0.00999321 -0.0914614" quat="0.499998 0.5 0.500002 0.5" type="mesh" mesh="tip_left" material="alum" contype="0" conaffinity="0"/>

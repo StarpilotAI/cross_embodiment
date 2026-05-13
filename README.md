@@ -70,9 +70,15 @@ cp data/i2rt/i2rt/robot_models/gripper/linear_4310/assets/*.stl \
 #   download JSON, save to data/calibration_clicks.json
 .venv/Scripts/python.exe scripts/19_solve_pnp_auto.py
 
-# 6) Render + composite
+# 6a) Gripper-only render (sanity check the calibration)
 .venv/Scripts/python.exe scripts/21_render_grippers.py
 .venv/Scripts/python.exe scripts/15_composite_pinhole.py
+
+# 6b) Full bimanual YAM render + IK across all frames
+#   ROLL_OFFSET_DEG arg (default 90) adds a roll to the gripper around its
+#   forward axis to give the IK headroom past YAM's tight wrist limits.
+.venv/Scripts/python.exe scripts/32_render_full_episode.py 90
+
 ffmpeg -y -framerate 30 -i artifacts/composite_pinhole/%06d.png \
     -c:v libx264 -pix_fmt yuv420p -crf 18 artifacts/composite_pinhole.mp4
 ```
@@ -86,6 +92,26 @@ ffmpeg -y -framerate 30 -i artifacts/composite_pinhole/%06d.png \
   debug). Arrow keys / space to scrub.
 * `http://localhost:8765/viewer/calibrate.html` — click-based scene-camera
   calibrator. Click the base of each visible PIKA gripper, download JSON.
+
+## YAM full-body IK notes
+
+* The canonical i2rt `yam.xml` is a *placeholder* for link6 — the real pos /
+  quat / joint axis live in `data/i2rt/i2rt/robots/config/linear_4310.yml` and
+  get spliced in by `combine_arm_and_gripper_xml()` at runtime. `scripts/32_…`
+  inlines those values directly (`pos="2.4e-07 -0.042 0.040"`,
+  `quat="0.5 -0.5 -0.5 -0.5"`, `axis="0 0 -1"`). Using the placeholder
+  `quat=identity` produces a YAM whose wrist cannot reach most human hand
+  orientations — symptom is j4/j5 pinned at their limits with large rotation
+  residual.
+* IK target: `R_link6 = R_vive @ Rx(180°) @ Rz(ROLL_OFFSET_DEG)` and
+  `P_link6 = P_vive + R_vive @ (0, 0, -0.1092)`. The Rx(180°) matches script
+  21's gfix mocap convention; the position offset puts the gripper geometry
+  where script 21 places it. `ROLL_OFFSET_DEG=90` gives the IK the most
+  headroom past YAM's ±90° j4/j5 wrist limits.
+* The damped-LS IK warm-starts from the previous frame, then runs a multi-seed
+  escape (8 alternate seeds) on any frame whose residual exceeds 30mm / 15°.
+* Gripper finger widths are driven from `state[14]` (arm1) and `state[30]`
+  (arm2) — normalized [0,1] scaled to the linear_4310 slide stroke of 4.75cm.
 
 ## Calibration design notes
 
