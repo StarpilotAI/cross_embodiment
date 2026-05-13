@@ -12,9 +12,9 @@ the same camera as the operator's gripper pose.
 
 ## Result
 
-![pipeline preview](docs/pipeline.gif)
+https://github.com/StarpilotAI/cross_embodiment/raw/main/docs/demo.mp4
 
-(Image generated from `artifacts/composite_pinhole.mp4`.)
+<video src="https://github.com/StarpilotAI/cross_embodiment/raw/main/docs/demo.mp4" controls width="640"></video>
 
 ## Pipeline
 
