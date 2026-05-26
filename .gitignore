@@ -49,3 +49,7 @@ server.log
 # OS
 .DS_Store
 Thumbs.db
+
+# Bulky overlay dataset + derived sidecar (regenerate via scripts/)
+data_overlay_industrial/
+sidecar.json
