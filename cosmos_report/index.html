@@ -55,7 +55,30 @@
   <p class="lead">The cross-embodiment pipeline renders a YAM bimanual robot into human manipulation video. To make that data robust, we want to <b>vary the environment</b> — same robot motion, many backgrounds. NVIDIA <b>Cosmos Transfer</b> is a video-to-video "world transfer" model built for exactly this: feed it a video plus a structural control signal, and it regenerates everything else from a text prompt.</p>
   <p>We drive it with a <b>Canny edge map</b> (deterministic, computed straight from the RGB frames — no flaky learned depth). The edge map pins the robot, box, crate, and HUD geometry; the prompt repaints the surrounding world.</p>
 
-  <h2>Inputs</h2>
+  <h2>Same motion, three worlds <span class="tag">new</span></h2>
+  <p class="lead">One smooth segment of the robot working, re-rendered into three completely different environments — <b>same arms, same motion, swapped surroundings</b>. This is the data-augmentation payoff: many backgrounds from a single take.</p>
+  <p class="mut">left = original · right = Cosmos · edge <code>control_weight 0.5</code> · segment auto-selected as the smoothest-tracking window (lowest motion-jerk with real movement) from the 8299-frame episode.</p>
+  <div class="grid">
+    <figure>
+      <video src="yam_lab.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Clean lab</b> — bright white studio.</figcaption>
+    </figure>
+    <figure>
+      <video src="yam_woodshop.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Woodshop</b> — rustic bench, exposed brick, golden-hour light.</figcaption>
+    </figure>
+  </div>
+  <figure>
+    <video src="yam_spaceship.mp4" controls muted loop playsinline preload="metadata"></video>
+    <figcaption><b>Spacecraft cargo bay</b> — dark brushed-metal panels, cyan accent lighting, starfield window.</figcaption>
+  </figure>
+  <h3>All three, stacked</h3>
+  <figure>
+    <video src="settings_compare.mp4" controls muted loop playsinline preload="metadata"></video>
+    <figcaption>lab / woodshop / spacecraft — each row is original | Cosmos.</figcaption>
+  </figure>
+
+  <h2>How it works — inputs</h2>
   <div class="grid">
     <figure>
       <video src="input.mp4" controls muted loop playsinline preload="metadata"></video>
@@ -67,8 +90,8 @@
     </figure>
   </div>
 
-  <h2>Result <span class="tag">it works</span></h2>
-  <p>Every clip below is <b>left = original, right = Cosmos</b> (side-by-side). The robot arms, box, and crate stay locked by the edge control while the environment, lighting, and the human operator are regenerated.</p>
+  <h2>How we got here — first run &amp; tuning</h2>
+  <p>The earlier exploration on a first segment. Every clip below is <b>left = original, right = Cosmos</b> (side-by-side). The robot arms, box, and crate stay locked by the edge control while the environment, lighting, and the human operator are regenerated.</p>
 
   <figure>
     <video src="yam_edge.mp4" controls muted loop playsinline preload="metadata"></video>
