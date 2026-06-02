@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-Embodiment → Cosmos: New Backgrounds</title>
+<style>
+  :root { --bg:#0c0d10; --panel:#15171c; --line:#262a33; --fg:#e6e8ec; --mut:#9aa3b2; --acc:#5ad19a; --acc2:#6aa6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1000px; margin:0 auto; padding:48px 22px 96px; }
+  h1 { font-size:30px; line-height:1.2; margin:0 0 6px; letter-spacing:-.02em; }
+  h2 { font-size:21px; margin:52px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  h3 { font-size:16px; margin:26px 0 8px; color:var(--acc); }
+  .sub { color:var(--mut); font-size:17px; margin:0 0 8px; }
+  code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:#0a0b0e; border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:#cfe8df; }
+  pre { background:#0a0b0e; border:1px solid var(--line); border-radius:9px; padding:14px 16px; overflow:auto; font-size:13px; color:#cfe1ff; }
+  p { margin:10px 0; }
+  .mut { color:var(--mut); }
+  video { width:100%; border-radius:10px; border:1px solid var(--line); background:#000; display:block; }
+  figure { margin:18px 0; }
+  figcaption { color:var(--mut); font-size:13.5px; margin-top:8px; }
+  .tag { display:inline-block; font-size:11.5px; font-family:ui-monospace,monospace; color:#0c0d10;
+    background:var(--acc); border-radius:4px; padding:1px 7px; vertical-align:middle; margin-left:8px; font-weight:600; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:720px){ .grid{ grid-template-columns:1fr; } }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; margin:10px 0; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:600; }
+  .ok { color:var(--acc); } .warn { color:#e8c15a; } .bad { color:#e87b7b; }
+  .lead { font-size:17px; }
+  .pill { font-size:12px; color:var(--mut); border:1px solid var(--line); border-radius:20px; padding:3px 11px; margin-right:6px; white-space:nowrap; }
+  .pills { margin:14px 0 0; }
+  .best { border:1px solid var(--acc); border-radius:12px; padding:4px 16px 16px; background:linear-gradient(180deg,rgba(90,209,154,.06),transparent); }
+  hr { border:0; border-top:1px solid var(--line); margin:40px 0; }
+  a { color:var(--acc2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Cross-Embodiment&nbsp;→&nbsp;NVIDIA Cosmos: generating new backgrounds</h1>
+  <p class="sub">Taking the bimanual-YAM video feed and re-rendering its environment with a video-to-video world model — running locally on an RTX 5090.</p>
+  <div class="pills">
+    <span class="pill">Cosmos Transfer2.5-2B</span>
+    <span class="pill">edge control</span>
+    <span class="pill">RTX 5090 · WSL2 Ubuntu</span>
+    <span class="pill">480p · 93 frames</span>
+    <span class="pill">~4 min / clip</span>
+  </div>
+
+  <h2>The idea</h2>
+  <p class="lead">The cross-embodiment pipeline renders a YAM bimanual robot into human manipulation video. To make that data robust, we want to <b>vary the environment</b> — same robot motion, many backgrounds. NVIDIA <b>Cosmos Transfer</b> is a video-to-video "world transfer" model built for exactly this: feed it a video plus a structural control signal, and it regenerates everything else from a text prompt.</p>
+  <p>We drive it with a <b>Canny edge map</b> (deterministic, computed straight from the RGB frames — no flaky learned depth). The edge map pins the robot, box, crate, and HUD geometry; the prompt repaints the surrounding world.</p>
+
+  <h2>Inputs</h2>
+  <div class="grid">
+    <figure>
+      <video src="input.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Input</b> — the industrial YAM composite (1280×704), our pipeline's output.</figcaption>
+    </figure>
+    <figure>
+      <video src="edge.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Edge control</b> — Canny lines holding the scene structure for Cosmos.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Result <span class="tag">it works</span></h2>
+  <p>Every clip below is <b>left = original, right = Cosmos</b> (side-by-side). The robot arms, box, and crate stay locked by the edge control while the environment, lighting, and the human operator are regenerated.</p>
+
+  <figure>
+    <video src="yam_edge.mp4" controls muted loop playsinline preload="metadata"></video>
+    <figcaption>First successful run — warehouse prompt, edge <code>control_weight 1.0</code>.</figcaption>
+  </figure>
+
+  <h2>Tuning sweep</h2>
+  <p>Three variants in one batch (model loaded once). We swept the edge <b>control_weight</b> (how tightly it sticks to the original structure) and tested a simpler prompt.</p>
+
+  <div class="grid">
+    <figure>
+      <video src="yam_cw07.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>cw 0.7</b>, warehouse — busy, fragmented background.</figcaption>
+    </figure>
+    <figure>
+      <video src="yam_cw05.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>cw 0.5</b>, warehouse — cleaner, commits to the new room. Best warehouse.</figcaption>
+    </figure>
+  </div>
+
+  <div class="best">
+    <h3>Best result &nbsp;·&nbsp; cw 0.5 + minimalist-lab prompt</h3>
+    <figure>
+      <video src="yam_lab05.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption>Cleanest render of the set — a simple prompt regenerates more believably at 480p.</figcaption>
+    </figure>
+  </div>
+
+  <h3>All three, stacked</h3>
+  <figure>
+    <video src="sweep_compare.mp4" controls muted loop playsinline preload="metadata"></video>
+    <figcaption>cw0.7 / cw0.5 / lab — each row is original | Cosmos. One scrubber to compare.</figcaption>
+  </figure>
+
+  <h2>What we learned</h2>
+  <table>
+    <tr><th>Lever</th><th>Finding</th></tr>
+    <tr><td>edge <code>control_weight</code></td><td><b>0.5 &gt; 0.7</b> for background replacement — lower weight commits to the new environment instead of fighting the original.</td></tr>
+    <tr><td>prompt</td><td>Simpler scenes (minimalist lab) render noticeably cleaner than busy ones at 480p.</td></tr>
+    <tr><td>resolution</td><td>480p is the practical ceiling on a 32&nbsp;GB 5090; the base model wants ~65&nbsp;GB at 720p.</td></tr>
+    <tr><td>control modality</td><td>Canny edge — deterministic, no flicker. (Depth maps were too flaky.)</td></tr>
+  </table>
+
+  <h2>Setup &amp; hurdles cleared</h2>
+  <table>
+    <tr><th>Item</th><th>Resolution</th></tr>
+    <tr><td>Where it runs</td><td>RTX 5090 (32&nbsp;GB, Blackwell sm_120) in WSL2 Ubuntu 24.04 — base model needs Linux + a 24&nbsp;GB+ GPU.</td></tr>
+    <tr><td>Free hosted API</td><td><span class="bad">unavailable</span> — NVIDIA's hosted Cosmos video-gen endpoints are parked (verified by live 404), so we self-hosted.</td></tr>
+    <tr><td>VRAM fit</td><td>480p + guardrails disabled → ~32&nbsp;GB, right at the 5090's ceiling.</td></tr>
+    <tr><td>Blackwell / CUDA</td><td><code>uv sync --extra=cu128</code>; torch 2.7.0+cu128 runs sm_120 kernels.</td></tr>
+    <tr><td>transformer-engine libs</td><td>set <code>CUDA_HOME</code> for NVRTC; add bundled NVIDIA libs to <code>LD_LIBRARY_PATH</code> + unversioned <code>.so</code> symlinks for <code>libcudart</code>.</td></tr>
+    <tr><td>Gated weights</td><td>accept HF licenses: Transfer2.5-2B, Predict2.5-2B (base), Guardrail1.</td></tr>
+  </table>
+
+  <h3>Reproduce a clip</h3>
+<pre>python examples/inference.py \
+  -i cosmos_inputs/spec_lab05.json \
+  -o outputs/run --model edge --disable-guardrails</pre>
+  <p class="mut">Spec: <code>resolution:"480"</code>, <code>show_input:true</code>, <code>edge.control_weight:0.5</code>, absolute paths to <code>input.mp4</code> + <code>edge.mp4</code>.</p>
+
+  <hr>
+  <p class="mut">Generated locally on the 5090 box · Cosmos Transfer2.5-2B · edge control · 93-frame clip from <code>overlay_displays_yam_full.mp4</code>.</p>
+
+</div>
+</body>
+</html>
