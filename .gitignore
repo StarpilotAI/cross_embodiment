@@ -53,3 +53,6 @@ Thumbs.db
 # Bulky overlay dataset + derived sidecar (regenerate via scripts/)
 data_overlay_industrial/
 sidecar.json
+
+# here.now local state (claim tokens)
+.herenow/
